@@ -1,1 +1,1 @@
-# practica_procesos_SOI
+# Práctica 1 Sistemas Operativos USC
