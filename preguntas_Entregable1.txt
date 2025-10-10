@@ -1,0 +1,36 @@
+﻿A. Creación de procesos y API POSIX
+1. ¿Qué devuelve fork() en el padre y qué devuelve en el hijo? ¿Cómo lo usas para diferenciarlos en tu código?
+2. ¿Qué ocurre si fork() falla? ¿Cómo lo detectas y qué deberías hacer?
+3. Explica la diferencia entre PID y PPID. ¿Qué verías en getppid() si el padre termina antes que el hijo?
+4. ¿Por qué pones _POSIX_C_SOURCE 200809L al principio del archivo?
+5. ¿Qué diferencias habría si en vez de procesos usaras hilos (threads) para este ejercicio?
+B. Identidad del proceso y entorno
+6. ¿Para qué sirve cada una de estas llamadas: getpid, getppid, getuid, geteuid, getgid? Pon un caso donde UID ≠ EUID.
+7. ¿Cómo hereda el hijo el entorno del padre? ¿Por qué getenv("PATH") muestra algo en ambos?
+8. ¿Qué pasaría si en el hijo haces setenv("PATH", "...")? ¿Se ve en el padre? ¿Por qué?
+C. Memoria: direcciones virtuales, COW y segmentos
+9. En tu salida imprimes &g_var, &l_var y h_var. ¿Por qué coinciden las direcciones virtuales en padre e hijo tras fork()?
+10. Explica copy-on-write (COW) y en qué momento se materializa (se copian) las páginas de memoria.
+11. ¿Cómo demuestras en tu código que, aunque las direcciones virtuales coincidan, los valores son independientestras modificar en el hijo?
+12. Distingue los segmentos de memoria donde viven: g_var (global), l_var (stack), *h_var (heap).
+13. ¿Qué cambiaría si, en lugar de malloc, usas una memoria compartida (mmap con MAP_SHARED o SHM) y la modificas en el hijo?
+14. ¿La ASLR (aleatorización de direcciones) afecta a que padre e hijo tengan las mismas direcciones virtuales justo tras fork()? ¿Por qué?
+D. Entrada/Salida y competencia por stdin
+15. ¿Por qué ambos procesos compiten por stdin al hacer scanf? ¿Qué comportamiento práctico observas al ejecutar?
+16. ¿Para qué haces fflush(stdout) antes del scanf? Explica line buffering de stdout en terminal.
+17. ¿Qué ocurre si el usuario introduce solo una palabra? ¿Y si envía EOF (Ctrl-D)?
+18. ¿Cómo sincronizarías el acceso a stdin si quisieras evitar la competencia (sin usar hilos)?
+E. Ficheros y descriptores compartidos
+19. ¿Por qué abres el fichero antes de fork()? ¿Qué se hereda exactamente: el descriptor o la open file description(offset, flags)?
+20. ¿Cómo demostrarías que comparten offset? (Pista: lseek(fd, 0, SEEK_CUR) antes y después de escribir).
+21. ¿Tus escrituras con dprintf(fd, ...) son atómicas? ¿Qué pasa si las líneas son largas? ¿Cambiaría algo usando O_APPEND?
+22. ¿Qué pasaría si en el hijo cierras con close(fd) y el padre sigue escribiendo? ¿Y al revés?
+23. ¿Para qué usarías la bandera O_CLOEXEC al abrir archivos si luego fueses a llamar a exec()?
+F. Orden, sincronización y finalización
+24. ¿Por qué sería útil que el padre hiciera un waitpid(pid, &st, 0)? ¿Qué problema evita respecto a zombies?
+25. ¿En tu diseño podría quedar un proceso zombie? ¿En qué situación y cómo lo evitarías?
+26. ¿Por qué en el hijo usas _exit(0) y no exit(0)? ¿Qué riesgo hay con los buffers de stdio tras fork()?
+G. Verificación y depuración
+27. ¿Qué comandos usarías para observar la relación padre-hijo en tiempo real? (p. ej., ps -o pid,ppid,stat,cmd | pstree | strace -f)
+28. ¿Cómo demostrarías, con una única ejecución, que el padre no ve las modificaciones de g_var, l_var y *h_varque hizo el hijo (pista: re-imprimir en el padre después de waitpid)?
+29.
