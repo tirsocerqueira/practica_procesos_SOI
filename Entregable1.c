@@ -44,9 +44,20 @@ int main(void) {
     fflush(stdout);
     if (scanf("%63s", buf) == 1) printf("[%s] leí: %s\n", who, buf);
     else                         printf("[%s] scanf fallo/EOF\n", who);
+//muestra explicita offset compartido
+    off_t off1 = lseek(fd, 0, SEEK_CUR);
+    if (off1 == (off_t)-1) perror("lseek antes");
 
-    // Fichero abierto antes del fork -> comparten descriptor/offset
-    dprintf(fd, "[%s] escribe tras fork (mismo FD)\n", who);
+    if (dprintf(fd, "[%s] escribe tras fork (mismo FD)\n", who) < 0)
+        perror("dprintf");
+
+    off_t off2 = lseek(fd, 0, SEEK_CUR);
+    if (off2 == (off_t)-1) perror("lseek despues");
+
+    printf("[%s] offset antes=%lld  despues=%lld  (+%lld bytes)\n",
+        who, (long long)off1, (long long)off2, (long long)(off2 - off1));
+    fflush(stdout);
+
 
     if (pid == 0) {               // HIJO
         close(fd);
@@ -61,6 +72,5 @@ int main(void) {
         return 0;
     }
 }
-
 
 
