@@ -1,0 +1,5 @@
+[PADRE] antes de fork
+[PADRE] escribe tras fork (mismo FD)
+[PADRE] Valores finales -> g_var=42, l_var=100, *h_var=7
+[HIJO] escribe tras fork (mismo FD)
+[HIJO] Valores finales -> g_var=43, l_var=101, *h_var=8
