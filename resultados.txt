@@ -1,7 +1,7 @@
-Proceso 1: tipo=bloque sum=-364482264.10767543 count=160000000 tiempo=1.323326
-Proceso 3: tipo=bloque sum=136986770.09045789 count=160000000 tiempo=1.335742
-Proceso 4: tipo=bloque sum=-57180357.696993984 count=160000000 tiempo=1.346336
-Proceso 5: tipo=bloque sum=-1493682425.623039 count=160000000 tiempo=1.342115
-Proceso 2: tipo=bloque sum=-43420451.492008887 count=160000000 tiempo=1.354752
-Proceso 6: tipo=agregado media=-2.2772234110365743 tiempo=0.000025
-Proceso 7: tipo=total media=-2.2772234110369403 tiempo=5.138234
+Proceso 1: tipo=bloque sum=-4615.0481866841665 count=600 tiempo=0.000012
+Proceso 2: tipo=bloque sum=977.74837211143335 count=600 tiempo=0.000011
+Proceso 3: tipo=bloque sum=884.91858142267927 count=600 tiempo=0.000011
+Proceso 4: tipo=bloque sum=1345.3159587809953 count=600 tiempo=0.000014
+Proceso 5: tipo=bloque sum=-513679.59577588644 count=600 tiempo=0.000013
+Proceso 7: tipo=total media=-171.6955536834185 tiempo=0.000054
+Proceso 6: tipo=agregado media=-171.6955536834185 tiempo=0.000081

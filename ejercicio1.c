@@ -4,7 +4,7 @@
 #include <sys/types.h>
 #include <fcntl.h>
 
-// Variable global (segmento de datos)
+// Variable global
 // Se utiliza para demostrar cómo fork copia el espacio de memoria
 int g_var = 42;
 
