@@ -1,3 +1,4 @@
+#define _XOPEN_SOURCE 700
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -17,7 +18,7 @@ int main() {
 
     // Si PID -1 es un error
     if (pid1 < 0) {
-        perror("Error al crear el primer hijo");
+        perror("fork hijo1");
         return 1;
     }
 
