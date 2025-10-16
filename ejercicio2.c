@@ -1,70 +1,110 @@
+#define _XOPEN_SOURCE 700
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <sys/types.h>
+#include <sys/wait.h>
+#include <errno.h>
+#include <string.h>
+#include <signal.h>
+#include <time.h>
 
-int main() {
+/* Ventanas de tiempo (ajústalas si quieres observar con más calma) */
+enum {
+    SLEEP_PADRE_ANTES_WAIT   = 12,   /* tiempo para que hijo1 quede zombie visible */
+    SLEEP_HIJO2_LARGO        = 20,  /* asegura que hijo2 sobreviva al padre -> huérfano */
+};
 
-    // Se usa el tipo pid_t en vez de int porque garantiza portabilidad a otro sistemas UNIX
+
+
+int main(void) {
     pid_t pid1, pid2;
 
-    /////////////////////////
-    // PRIMER FORK 
-    /////////////////////////
-    // Crea el primer hijo, el hijo que será zombie
-    /* Condición para que un hijo se transforme en zombie: 
-        - El proceso termina su ejecución y su padre no utiliza wait/waitpid para recoger la salida del proceso
-        => Para forzar esta situación el hijo debe terminar inmediatamente (exit) y el padre ejecutar una llamada que lo obligue a sobrevivir
-        por ejemplo un sleep
+    printf("[PADRE %d] Iniciando. Creo Hijo1 (zombie) y Hijo2 (huérfano).\n", getpid());
+    fflush(stdout);
 
-        Para observar que ha muerto => /bin/ps -p y número de proceso
-        O bien:
-                                    => /bin/ps -p número proces -o pid,ppid,state (código de proceso,ódigo de proceso padre, estado)
-                                    => si estado = defunct en el primer caso o Z+ en el segundo => es zombie
-    */
+    /* --- Primer hijo: terminar rápido -> zombie hasta que el padre haga waitpid --- */
     pid1 = fork();
-
-    // Si el PID del primer hijo es menor que cero indica que ha tenido un error en la ejecución
     if (pid1 < 0) {
-        perror("Error al crear el primer hijo");
+        perror("fork hijo1");
         return 1;
     }
-
-    // Si devuelve cero se ha creado el hijo correctamente
     if (pid1 == 0) {
-        // Entramos en el primer hijo
-        printf("Soy el primer hijo, mi PID es %d, el PID de mi padre es %d\n", getpid(), getppid());
-        exit(0);
-    } else {
-        /////////////////////////
-        // SEGUNDO FORK 
-        /////////////////////////
-        // Padre crea al segundo hijo, el hijo que sea huérfano
-        pid2 = fork();
-
-        if (pid2 < 0) {
-            perror("Error al crear el segundo hijo");
-            return 1;
-        }
-
-        // Si devuelve cero se ha creado el hijo correctamente
-        if (pid2 == 0) {
-            // Entramos en el segundo hijo
-            printf("Soy el segundo hijo antes de que muera mi padre, mi PID es %d, el PID de mi padre es %d\n", getpid(), getppid());
-            // Se debe dormir al hijo por encima del sleep del padre para forzar que sobreviva al padre
-            sleep(30);
-            printf("Soy el segundo hijo después de que muera mi padre, mi PID es %d, el PID de mi padre es %d\n", getpid(), getppid());
-            
-        } else {
-            // Proceso padre
-            printf("Soy el padre, mi PID es %d\n", getpid());
-            // Espera para forzar que el padre sobreviva al primer hijo
-            sleep(20);
-
-            // Después de los 40 segundos, sale para mostrar que el segundo hijo se queda huérfano y que lo adopta otro proceso padre
-            exit(0);
-        }
+        /* HIJO 1 */
+        printf("[HIJO1 %d, padre=%d] Voy a terminar YA (exit(7)) para convertirme en zombie.\n",
+               getpid(), getppid());
+        fflush(stdout);
+        /* sale con código 7 para comprobar WEXITSTATUS en el padre */
+        _exit(7);
     }
 
+    /* --- Segundo hijo: vive más que el padre -> huérfano --- */
+    pid2 = fork();
+    if (pid2 < 0) {
+        perror("fork hijo2");
+        return 1;
+    }
+    if (pid2 == 0) {
+        /* HIJO 2 */
+        printf("[HIJO2 %d, padre=%d] Empiezo a dormir %ds. "
+               "Mi padre debería morir antes y me volveré huérfano.\n",
+               getpid(), getppid(), SLEEP_HIJO2_LARGO);
+        fflush(stdout);
+
+        sleep(SLEEP_HIJO2_LARGO);
+
+        /* Tras dormir, si el padre ya murió, mi PPID habrá cambiado (a 1/systemd) */
+        printf("[HIJO2 %d] Me desperté. Mi PPID AHORA es %d (esperado: 1 o PID de systemd).\n",
+               getpid(), getppid());
+        fflush(stdout);
+
+        /* Requisito: al final del segundo hijo, cambiar imagen con exec* y luego un printf.
+           El printf NO debe ejecutarse si exec tiene éxito. */
+        printf("[HIJO2 %d] Voy a ejecutar exec* (execlp(\"/bin/echo\", ...)).\n", getpid());
+        fflush(stdout);
+
+        execlp("echo", "echo",
+               "HIJO2: ejecutando /bin/echo mediante exec*. Si ves esto, exec funcionó.",
+               (char *)NULL);
+
+        /* Si llega aquí, exec falló */
+        perror("[HIJO2] exec* ha fallado");
+        _exit(127);
+    }
+
+    /* --- PADRE: esperar un poco para observar el zombie del Hijo1 --- */
+    info_ps_hint("Tras crear ambos hijos. Ahora Hijo1 debe estar Z (zombie) y Hijo2 vivo.");
+    printf("[PADRE %d] Duermo %ds para que puedas ver al Hijo1 como zombie (estado Z)...\n",
+           getpid(), SLEEP_PADRE_ANTES_WAIT);
+    fflush(stdout);
+    sleep(SLEEP_PADRE_ANTES_WAIT);
+
+    /* --- PADRE: recoger al hijo1 con waitpid e imprimir WEXITSTATUS --- */
+    int st = 0;
+    pid_t w = waitpid(pid1, &st, 0);
+    if (w == -1) {
+        perror("[PADRE] waitpid hijo1");
+    } else {
+        if (WIFEXITED(st)) {
+            int code = WEXITSTATUS(st);
+            printf("[PADRE %d] waitpid(hijo1=%d) OK. WIFEXITED=1, WEXITSTATUS=%d\n",
+                   getpid(), pid1, code);
+        } else if (WIFSIGNALED(st)) {
+            printf("[PADRE %d] waitpid(hijo1=%d) OK. Hijo terminó por señal %d\n",
+                   getpid(), pid1, WTERMSIG(st));
+        } else {
+            printf("[PADRE %d] waitpid(hijo1=%d) OK. Estado no convencional.\n",
+                   getpid(), pid1);
+        }
+    }
+    fflush(stdout);
+
+    info_ps_hint("Tras waitpid(hijo1). El zombie debe haber desaparecido. Hijo2 sigue vivo.");
+
+    /* --- PADRE: terminar AHORA para dejar huérfano al hijo2 --- */
+    printf("[PADRE %d] Termino ahora para que Hijo2 quede huérfano y sea adoptado por init/systemd.\n",
+           getpid());
+    fflush(stdout);
+
+    /* No esperamos a hijo2 a propósito (para que quede huérfano). */
     return 0;
 }
